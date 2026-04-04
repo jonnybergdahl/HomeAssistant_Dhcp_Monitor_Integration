@@ -35,3 +35,20 @@ It provides 5 sensors showing information about the last 5 detected devices.
 The integration will start listening for DHCP discovery events as soon as it is configured.
 The sensors will update their state with the IP address of the detected device.
 Other details like MAC address and Hostname are available in the sensor attributes.
+
+## Debug Logging
+To enable debug logging for this integration, add the following to your `configuration.yaml`:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.dhcp_monitor: debug
+```
+
+## Logging
+When debug logging is enabled, you should see the following keywords in your logs:
+- `Registering DHCP sniffer callback`: Confirmation that the integration is listening for DHCP packets via the internal API.
+- `'dhcp' integration is loaded and should be firing events`: Confirmation that the required `dhcp` component is active.
+- `DHCP packet received: IP=...`: Detailed information after processing a captured DHCP packet.
+- `Sensor DHCP Device X received update signal from dispatcher`: Confirmation that sensors are responding to new data.

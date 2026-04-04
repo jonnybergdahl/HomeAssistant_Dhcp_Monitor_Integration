@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from collections import deque
 
 @pytest.fixture
-def hass():
+def hass_and_mock():
     hass = MagicMock()
     hass.data = {}
     hass.config_entries = MagicMock()
@@ -26,46 +26,81 @@ def hass():
                 cb(event)
     hass.bus.async_fire.side_effect = async_fire
 
-    hass.async_block_till_done = AsyncMock()
-    return hass
+    # Mock dhcp data
+    mock_dhcp_data = MagicMock()
+    mock_dhcp_data.callbacks = set()
+    hass.data["dhcp"] = mock_dhcp_data
 
-from custom_components.dhcp_monitor import async_setup_entry
+    # Task management
+    tasks = []
+    def async_create_task(coro):
+        task = MagicMock()
+        tasks.append(coro)
+        return task
+    hass.async_create_task.side_effect = async_create_task
+
+    async def async_block_till_done():
+        while tasks:
+            coro = tasks.pop(0)
+            await coro
+    hass.async_block_till_done = async_block_till_done
+    
+    return hass, mock_dhcp_data
+
+from custom_components.dhcp_monitor import async_setup, async_setup_entry
 from custom_components.dhcp_monitor.const import DOMAIN, ATTR_IP_ADDRESS
 
 @pytest.mark.asyncio
-async def test_sensor_updates(hass) -> None:
+async def test_sensor_updates(hass_and_mock) -> None:
     """Test sensors update on DHCP discovery."""
+    hass, mock_dhcp_data = hass_and_mock
     entry = MagicMock()
     entry.async_on_unload = MagicMock()
     
-    # Setup integration
-    await async_setup_entry(hass, entry)
-    
+    # Mock dhcp component
+    with patch("custom_components.dhcp_monitor.DOMAIN", DOMAIN):
+        # Setup integration component
+        await async_setup(hass, {})
+        await hass.async_block_till_done()
+        
+        # Setup entry
+        await async_setup_entry(hass, entry)
+        
+        # Verify callback was registered
+        assert len(mock_dhcp_data.callbacks) == 1
+        # Get the callback function that was registered
+        callback_func = list(mock_dhcp_data.callbacks)[0]
+        
     # At this point, hass.data[DOMAIN]["history"] is initialized
     history = hass.data[DOMAIN]["history"]
     assert len(history) == 0
 
-    # Simulate DHCP discovery via event
+    # Simulate DHCP discovery via callback
+    # The new callback expects dict[mac, {ip, hostname}]
     discovery_data = {
-        "ip": "192.168.1.100",
-        "mac": "00:11:22:33:44:55",
-        "hostname": "test-device",
+        "00:11:22:33:44:55": {
+            "ip": "192.168.1.100",
+            "hostname": "test-device"
+        }
     }
     
-    # Fire the event
-    hass.bus.async_fire("dhcp_discovered", discovery_data)
+    # Trigger the callback
+    callback_func(discovery_data)
     
     # Check history
     assert len(history) == 1
     assert history[0]["ip_address"] == "192.168.1.100"
+    assert history[0]["mac_address"] == "00:11:22:33:44:55"
     
     # Simulate another discovery
     discovery_data_2 = {
-        "ip": "192.168.1.101",
-        "mac": "66:77:88:99:AA:BB",
-        "hostname": "test-device-2",
+        "66:77:88:99:AA:BB": {
+            "ip": "192.168.1.101",
+            "hostname": "test-device-2"
+        }
     }
-    hass.bus.async_fire("dhcp_discovered", discovery_data_2)
+    
+    callback_func(discovery_data_2)
     
     assert len(history) == 2
     assert history[0]["ip_address"] == "192.168.1.101"

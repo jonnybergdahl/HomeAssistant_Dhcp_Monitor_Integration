@@ -4,6 +4,14 @@
   "documentation": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration",
   "issue_tracker": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration/issues",
   "dependencies": ["dhcp"],
+  "dhcp": [
+    {
+      "macaddress": "*"
+    },
+    {
+      "hostname": "*"
+    }
+  ],
   "codeowners": ["@jonnybergdahl"],
   "config_flow": true,
   "iot_class": "local_push",

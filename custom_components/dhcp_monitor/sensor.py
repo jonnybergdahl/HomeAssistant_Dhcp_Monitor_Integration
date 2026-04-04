@@ -1,15 +1,18 @@
 """Sensor platform for DHCP Monitor."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, CONF_COUNT, ATTR_IP_ADDRESS, ATTR_MAC_ADDRESS, ATTR_HOSTNAME, ATTR_LAST_UPDATED
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -17,6 +20,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the DHCP Monitor sensors."""
+    _LOGGER.debug("Setting up DHCP Monitor sensors")
     
     entities = []
     for i in range(1, CONF_COUNT + 1):
@@ -60,8 +64,15 @@ class DhcpDeviceSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
+        _LOGGER.debug("Sensor %s added to Home Assistant", self._attr_name)
         self.async_on_remove(
             async_dispatcher_connect(
-                self.hass, f"{DOMAIN}_update", self.async_write_ha_state
+                self.hass, f"{DOMAIN}_update", self._handle_update
             )
         )
+
+    @callback
+    def _handle_update(self) -> None:
+        """Handle update from dispatcher."""
+        _LOGGER.debug("Sensor %s received update signal from dispatcher", self._attr_name)
+        self.async_write_ha_state()

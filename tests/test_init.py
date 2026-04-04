@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
 @pytest.fixture
-def hass():
+def hass_and_mock():
     hass = MagicMock()
     hass.data = {}
     hass.config_entries = MagicMock()
@@ -26,20 +26,47 @@ def hass():
                 cb(event)
     hass.bus.async_fire.side_effect = async_fire
 
-    hass.async_block_till_done = AsyncMock()
-    return hass
+    # Mock dhcp data
+    mock_dhcp_data = MagicMock()
+    mock_dhcp_data.callbacks = set()
+    hass.data["dhcp"] = mock_dhcp_data
+    
+    # Task management
+    tasks = []
+    def async_create_task(coro):
+        task = MagicMock()
+        tasks.append(coro)
+        return task
+    hass.async_create_task.side_effect = async_create_task
 
-from custom_components.dhcp_monitor import async_setup_entry, async_unload_entry
+    async def async_block_till_done():
+        while tasks:
+            coro = tasks.pop(0)
+            await coro
+    hass.async_block_till_done = async_block_till_done
+    
+    return hass, mock_dhcp_data
+
+from custom_components.dhcp_monitor import async_setup, async_setup_entry, async_unload_entry
 from custom_components.dhcp_monitor.const import DOMAIN
 
 @pytest.mark.asyncio
-async def test_setup_and_unload(hass) -> None:
+async def test_setup_and_unload(hass_and_mock) -> None:
     """Test setting up and unloading the integration."""
+    hass, mock_dhcp_data = hass_and_mock
     entry = MagicMock()
     entry.async_on_unload = MagicMock()
     
-    # Setup
-    assert await async_setup_entry(hass, entry)
+    # Mock dhcp component
+    with patch("custom_components.dhcp_monitor.DOMAIN", DOMAIN):
+        # Component Setup
+        assert await async_setup(hass, {})
+        
+        assert len(mock_dhcp_data.callbacks) == 1
+        
+        # Entry Setup
+        assert await async_setup_entry(hass, entry)
+        
     assert DOMAIN in hass.data
     assert "history" in hass.data[DOMAIN]
     
