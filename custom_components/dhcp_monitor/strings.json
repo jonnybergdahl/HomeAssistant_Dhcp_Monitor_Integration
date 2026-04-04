@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "DHCP Monitor",
+        "description": "Do you want to set up DHCP Monitor?"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single instance of DHCP Monitor is allowed."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "dhcp_device": {
+        "name": "DHCP Device {index}"
+      }
+    }
+  }
+}
