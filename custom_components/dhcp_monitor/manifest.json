@@ -1,8 +1,8 @@
 {
   "domain": "dhcp_monitor",
   "name": "DHCP Monitor",
-  "documentation": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration",
-  "issue_tracker": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration/issues",
+  "codeowners": ["@jonnybergdahl"],
+  "config_flow": true,
   "dependencies": ["dhcp"],
   "dhcp": [
     {
@@ -12,8 +12,8 @@
       "hostname": "*"
     }
   ],
-  "codeowners": ["@jonnybergdahl"],
-  "config_flow": true,
+  "documentation": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration",
   "iot_class": "local_push",
+  "issue_tracker": "https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration/issues",
   "version": "1.0.0"
 }
