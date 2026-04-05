@@ -11,14 +11,10 @@ It provides 5 sensors showing information about the last 5 detected devices.
 - Attributes include: IP address, MAC address, and Hostname.
 
 ## Installation
-### HACS
-1. Open HACS in Home Assistant.
-2. Click on "Integrations".
-3. Click the three dots in the top right corner and select "Custom repositories".
-4. Add `https://github.com/jonnybergdahl/HomeAssistant_Dhcp_Monitor_Integration` as a "Integration".
-5. Click "Add".
-6. Search for "DHCP Monitor" and install it.
-7. Restart Home Assistant.
+
+Click the button to add this repository to HACS.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jonnybergdahl&category=Integration&repository=HomeAssistant_Dhcp_Monitor_Integration)
 
 ### Manual
 1. Download the `dhcp_monitor` folder from `custom_components`.
@@ -26,10 +22,12 @@ It provides 5 sensors showing information about the last 5 detected devices.
 3. Restart Home Assistant.
 
 ## Configuration
-1. Go to **Settings** > **Devices & Services**.
-2. Click **Add Integration**.
-3. Search for **DHCP Monitor**.
-4. Follow the prompts to complete the setup.
+
+Click the button to add a DHCP Monitor device to Home Assistant.
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=dhcp_monitor)
+
+Click OK when it asks if you want to setup the DHCP Monitor integration.
 
 ## Usage
 The integration will start listening for DHCP discovery events as soon as it is configured.
