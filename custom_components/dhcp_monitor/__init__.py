@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
@@ -55,11 +55,16 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 hostname,
             )
 
+            # Format MAC address to 00:00:00... style
+            formatted_mac = mac_address
+            if ":" not in mac_address:
+                formatted_mac = ":".join(mac_address[i:i+2] for i in range(0, len(mac_address), 2))
+            
             device_info = {
                 "ip_address": ip_address,
-                "mac_address": mac_address,
+                "mac_address": formatted_mac,
                 "hostname": hostname,
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(),
             }
 
             # Add to history
@@ -71,45 +76,54 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         async_dispatcher_send(hass, f"{DOMAIN}_update")
 
     # This registers your listener to the GLOBAL dhcp signal
-    _LOGGER.debug("Registering DHCP sniffer callback")
-    # In Home Assistant, dhcp component stores its data in hass.data["dhcp"]
-    # We add our callback to the callbacks set.
-    try:
-        from homeassistant.components.dhcp.models import DATA_DHCP
-        # Try to use DATA_DHCP key (recommended)
-        dhcp_data = hass.data.get(DATA_DHCP)
-        if dhcp_data and hasattr(dhcp_data, "callbacks"):
-            dhcp_data.callbacks.add(_dev_sniffer_callback)
-            _LOGGER.debug("Successfully registered DHCP callback")
-        else:
-            # Fallback for older HA or different structure
+    _LOGGER.debug("Scheduling DHCP sniffer callback registration")
+
+    async def _async_register_sniffer(event: Any = None) -> None:
+        """Register the sniffer callback."""
+        _LOGGER.debug("Registering DHCP sniffer callback")
+        # In Home Assistant, dhcp component stores its data in hass.data["dhcp"]
+        # We add our callback to the callbacks set.
+        try:
+            from homeassistant.components.dhcp.models import DATA_DHCP
+            # Try to use DATA_DHCP key (recommended)
+            dhcp_data = hass.data.get(DATA_DHCP)
+            if dhcp_data and hasattr(dhcp_data, "callbacks"):
+                dhcp_data.callbacks.add(_dev_sniffer_callback)
+                _LOGGER.debug("Successfully registered DHCP callback")
+            else:
+                # Fallback for older HA or different structure
+                if "dhcp" in hass.data:
+                    # Some versions might use the string key directly
+                    d_data = hass.data["dhcp"]
+                    if hasattr(d_data, "callbacks"):
+                        # DHCPData object
+                        d_data.callbacks.add(_dev_sniffer_callback)
+                        _LOGGER.debug("Successfully registered DHCP callback (fallback)")
+                    elif isinstance(d_data, dict) and "callbacks" in d_data:
+                        # Dict storage
+                        d_data["callbacks"].add(_dev_sniffer_callback)
+                        _LOGGER.debug("Successfully registered DHCP callback (dict fallback)")
+                    else:
+                        _LOGGER.error("DHCP data found but no callbacks member")
+                else:
+                    _LOGGER.error("DHCP data not found in hass.data")
+        except ImportError:
+            # DATA_DHCP not available, try string key fallback
             if "dhcp" in hass.data:
-                # Some versions might use the string key directly
                 d_data = hass.data["dhcp"]
                 if hasattr(d_data, "callbacks"):
-                    # DHCPData object
                     d_data.callbacks.add(_dev_sniffer_callback)
-                    _LOGGER.debug("Successfully registered DHCP callback (fallback)")
+                    _LOGGER.debug("Successfully registered DHCP callback (ImportError fallback)")
                 elif isinstance(d_data, dict) and "callbacks" in d_data:
-                    # Dict storage
                     d_data["callbacks"].add(_dev_sniffer_callback)
-                    _LOGGER.debug("Successfully registered DHCP callback (dict fallback)")
-                else:
-                    _LOGGER.error("DHCP data found but no callbacks member")
-            else:
-                _LOGGER.error("DHCP data not found in hass.data")
-    except ImportError:
-        # DATA_DHCP not available, try string key fallback
-        if "dhcp" in hass.data:
-            d_data = hass.data["dhcp"]
-            if hasattr(d_data, "callbacks"):
-                d_data.callbacks.add(_dev_sniffer_callback)
-                _LOGGER.debug("Successfully registered DHCP callback (ImportError fallback)")
-            elif isinstance(d_data, dict) and "callbacks" in d_data:
-                d_data["callbacks"].add(_dev_sniffer_callback)
-                _LOGGER.debug("Successfully registered DHCP callback (ImportError dict fallback)")
-    except Exception as err:
-        _LOGGER.error("Failed to register DHCP callback: %s", err)
+                    _LOGGER.debug("Successfully registered DHCP callback (ImportError dict fallback)")
+        except Exception as err:
+            _LOGGER.error("Failed to register DHCP callback: %s", err)
+
+    if hass.is_running:
+        hass.async_create_task(_async_register_sniffer())
+    else:
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_register_sniffer)
 
     return True
 

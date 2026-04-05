@@ -39,10 +39,25 @@ def hass_and_mock():
         return task
     hass.async_create_task.side_effect = async_create_task
 
+    def is_running():
+        return True
+    hass.is_running = is_running
+    
+    # Event listening
+    event_listeners = {}
+    def async_listen_once(event_type, callback):
+        event_listeners[event_type] = callback
+        return lambda: None
+    hass.bus.async_listen_once.side_effect = async_listen_once
+
     async def async_block_till_done():
         while tasks:
             coro = tasks.pop(0)
             await coro
+        # Also trigger EVENT_HOMEASSISTANT_STARTED if present
+        if "homeassistant_started" in event_listeners:
+            callback = event_listeners.pop("homeassistant_started")
+            await callback(None)
     hass.async_block_till_done = async_block_till_done
     
     return hass, mock_dhcp_data
@@ -61,6 +76,7 @@ async def test_setup_and_unload(hass_and_mock) -> None:
     with patch("custom_components.dhcp_monitor.DOMAIN", DOMAIN):
         # Component Setup
         assert await async_setup(hass, {})
+        await hass.async_block_till_done()
         
         assert len(mock_dhcp_data.callbacks) == 1
         

@@ -39,10 +39,25 @@ def hass_and_mock():
         return task
     hass.async_create_task.side_effect = async_create_task
 
+    def is_running():
+        return True
+    hass.is_running = is_running
+
+    # Event listening
+    event_listeners = {}
+    def async_listen_once(event_type, callback):
+        event_listeners[event_type] = callback
+        return lambda: None
+    hass.bus.async_listen_once.side_effect = async_listen_once
+
     async def async_block_till_done():
         while tasks:
             coro = tasks.pop(0)
             await coro
+        # Also trigger EVENT_HOMEASSISTANT_STARTED if present
+        if "homeassistant_started" in event_listeners:
+            callback = event_listeners.pop("homeassistant_started")
+            await callback(None)
     hass.async_block_till_done = async_block_till_done
     
     return hass, mock_dhcp_data
@@ -91,10 +106,13 @@ async def test_sensor_updates(hass_and_mock) -> None:
     assert len(history) == 1
     assert history[0]["ip_address"] == "192.168.1.100"
     assert history[0]["mac_address"] == "00:11:22:33:44:55"
+    # Verify native datetime
+    from datetime import datetime
+    assert isinstance(history[0]["last_updated"], datetime)
     
-    # Simulate another discovery
+    # Simulate another discovery with raw mac (no colons)
     discovery_data_2 = {
-        "66:77:88:99:AA:BB": {
+        "66778899AABB": {
             "ip": "192.168.1.101",
             "hostname": "test-device-2"
         }
@@ -104,4 +122,6 @@ async def test_sensor_updates(hass_and_mock) -> None:
     
     assert len(history) == 2
     assert history[0]["ip_address"] == "192.168.1.101"
+    assert history[0]["mac_address"] == "66:77:88:99:AA:BB"
+    assert isinstance(history[0]["last_updated"], datetime)
     assert history[1]["ip_address"] == "192.168.1.100"
