@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, CONF_COUNT
 
@@ -64,7 +65,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
                 "ip_address": ip_address,
                 "mac_address": formatted_mac,
                 "hostname": hostname,
-                "last_updated": datetime.now(),
+                "last_updated": dt_util.now(),
             }
 
             # Add to history
