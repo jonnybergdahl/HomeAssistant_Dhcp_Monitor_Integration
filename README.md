@@ -5,6 +5,8 @@
 This Home Assistant integration uses DHCP discovery to monitor IP address assignments on your network. 
 It provides 5 sensors showing information about the last 5 detected devices.
 
+![icon.png](custom_components/dhcp_monitor/brand/icon.png)
+
 ## Features
 - Detects new IP address assignments via DHCP discovery.
 - 5 sensors: `sensor.dhcp_device_1` to `sensor.dhcp_device_5`.
