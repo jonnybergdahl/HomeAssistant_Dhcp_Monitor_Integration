@@ -36,6 +36,27 @@ The integration will start listening for DHCP discovery events as soon as it is 
 The sensors will update their state with the IP address of the detected device.
 Other details like MAC address and Hostname are available in the sensor attributes.
 
+You can use it with a Markdown card to display the info like this. 
+
+![markdown_sample.png](assets/markdown_sample.png)
+
+Use the following yaml. 
+
+```yaml
+type: markdown
+content: >-
+IP Address | MAC | Host name | Time stamp
+--- | --- | --- | ---
+{% for i in range(1, 6) %}
+{%- set dev = 'sensor.dhcp_device_' ~ i -%}
+{%- set ip = states(dev) -%}
+{%- set mac = state_attr(dev, 'mac_address') -%}
+{%- set host = state_attr(dev, 'hostname') -%}
+{%- set last = state_attr(dev, 'last_updated') -%}
+{{ ip if ip not in ['unknown', 'unavailable'] else '—' }} | {{ mac if mac else '—' }} | {{ host if host else '—' }} | {{ last.strftime('%Y-%m-%d %H:%M') if last else '—' }}
+{% endfor %}
+```
+
 ## Debug Logging
 To enable debug logging for this integration, add the following to your `configuration.yaml`:
 
