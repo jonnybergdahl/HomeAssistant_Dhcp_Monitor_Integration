@@ -2,7 +2,8 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
-This Home Assistant integration uses DHCP discovery to monitor IP address assignments on your network. 
+This Home Assistant integration hooks into the [Home Assistant DHC discovery](https://www.home-assistant.io/integrations/dhcp/)
+integration to monitor IP address assignments on your network. 
 It provides 5 sensors showing information about the last 5 detected devices.
 
 ![icon.png](custom_components/dhcp_monitor/brand/icon.png)
