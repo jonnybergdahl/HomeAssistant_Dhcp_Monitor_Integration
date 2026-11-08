@@ -62,7 +62,7 @@ def hass_and_mock():
     
     return hass, mock_dhcp_data
 
-from custom_components.dhcp_monitor import async_setup, async_setup_entry
+from custom_components.dhcp_monitor import async_setup_entry
 from custom_components.dhcp_monitor.const import DOMAIN, ATTR_IP_ADDRESS
 
 @pytest.mark.asyncio
@@ -74,10 +74,6 @@ async def test_sensor_updates(hass_and_mock) -> None:
     
     # Mock dhcp component
     with patch("custom_components.dhcp_monitor.DOMAIN", DOMAIN):
-        # Setup integration component
-        await async_setup(hass, {})
-        await hass.async_block_till_done()
-        
         # Setup entry
         await async_setup_entry(hass, entry)
         

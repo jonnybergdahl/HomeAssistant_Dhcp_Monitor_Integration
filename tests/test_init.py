@@ -62,7 +62,7 @@ def hass_and_mock():
     
     return hass, mock_dhcp_data
 
-from custom_components.dhcp_monitor import async_setup, async_setup_entry, async_unload_entry
+from custom_components.dhcp_monitor import async_setup_entry, async_unload_entry
 from custom_components.dhcp_monitor.const import DOMAIN
 
 @pytest.mark.asyncio
@@ -74,18 +74,19 @@ async def test_setup_and_unload(hass_and_mock) -> None:
     
     # Mock dhcp component
     with patch("custom_components.dhcp_monitor.DOMAIN", DOMAIN):
-        # Component Setup
-        assert await async_setup(hass, {})
-        await hass.async_block_till_done()
-        
-        assert len(mock_dhcp_data.callbacks) == 1
-        
+        assert len(mock_dhcp_data.callbacks) == 0
+
         # Entry Setup
         assert await async_setup_entry(hass, entry)
-        
+
+        assert len(mock_dhcp_data.callbacks) == 1
+
     assert DOMAIN in hass.data
     assert "history" in hass.data[DOMAIN]
-    
-    # Unload
+
+    # Unload: HA calls the functions registered with async_on_unload
     assert await async_unload_entry(hass, entry)
+    for call in entry.async_on_unload.call_args_list:
+        call.args[0]()
     assert DOMAIN not in hass.data
+    assert len(mock_dhcp_data.callbacks) == 0
