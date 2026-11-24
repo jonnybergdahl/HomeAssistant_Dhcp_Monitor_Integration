@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from collections.abc import Callable
 from typing import Any
 
+from homeassistant.components.dhcp.helpers import (
+    async_register_dhcp_callback_internal,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -17,26 +19,6 @@ from .const import DOMAIN, CONF_COUNT
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
-
-DHCP_DOMAIN = "dhcp"
-
-
-@callback
-def _async_register_dhcp_callback(
-    hass: HomeAssistant, callback_: Callable[[dict[str, Any]], None]
-) -> Callable[[], None]:
-    """Register a callback with the dhcp integration and return an unsubscribe function."""
-    try:
-        from homeassistant.components.dhcp.helpers import (
-            async_register_dhcp_callback_internal,
-        )
-    except ImportError:
-        # Older Home Assistant versions without the helper
-        callbacks = hass.data[DHCP_DOMAIN].callbacks
-        callbacks.add(callback_)
-        return lambda: callbacks.discard(callback_)
-
-    return async_register_dhcp_callback_internal(hass, callback_)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -80,7 +62,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_dispatcher_send(hass, f"{DOMAIN}_update")
 
     _LOGGER.debug("Registering DHCP sniffer callback")
-    entry.async_on_unload(_async_register_dhcp_callback(hass, _dhcp_callback))
+    # Relies on an internal helper of the dhcp integration; there is no public
+    # API for subscribing to DHCP packets.
+    entry.async_on_unload(
+        async_register_dhcp_callback_internal(hass, _dhcp_callback)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
